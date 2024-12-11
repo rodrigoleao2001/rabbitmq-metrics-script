@@ -37,14 +37,14 @@ This document explains how to configure and execute the RabbitMQ metrics extensi
 
 ### Steps to Configure
 
-1. Enable the HTTP listener in the Machine Agent configuration file by setting the appropriate port and enabling the feature.
+1. Enable the HTTP listener in the Machine Agent configuration file by setting the appropriate port and enabling the feature (`java -jar machineagent.jar -Dmetric.http.listener=true -Dmetric.http.listener.port=8293`).
 
 2. Set environment variables:
    - `RABBITMQ_USERNAME`: RabbitMQ API username.
    - `RABBITMQ_PASSWORD`: RabbitMQ API password.
    - `RABBITMQ_BASEURL`: RabbitMQ API base URL.
 
-3. Execute the PowerShell script directly to send metrics to the HTTP listener (`java -jar machineagent.jar -Dmetric.http.listener=true -Dmetric.http.listener.port=8293`).
+3. Execute the PowerShell script directly to send metrics to the HTTP listener.
 
 4. To execute the script periodically, configure a Task Scheduler on Windows or the equivalent on other OS.
 
