@@ -1,28 +1,28 @@
 # RabbitMQ Metrics Extension for AppDynamics Machine Agent
-# Este script recupera métricas da API de Gerenciamento do RabbitMQ e as exibe no formato exigido pelo AppDynamics Machine Agent.
-# As métricas são exibidas como "name=<metric name>,value=<value>,aggregator=<aggregator type>,time-rollup=<time-rollup strategy>,cluster-rollup=<cluster-rollup strategy>".
+# This script retrieves metrics from the RabbitMQ Management API and outputs them in the format required by the AppDynamics Machine Agent.
+# Metrics are displayed as "name=<metric name>,value=<value>,aggregator=<aggregator type>,time-rollup=<time-rollup strategy>,cluster-rollup=<cluster-rollup strategy>".
 
-# Variáveis de Ambiente:
-# Certifique-se de que as seguintes variáveis de ambiente estejam definidas:
-# - RABBITMQ_USERNAME: Nome de usuário da API de Gerenciamento do RabbitMQ
-# - RABBITMQ_PASSWORD: Senha da API de Gerenciamento do RabbitMQ
-# - RABBITMQ_BASEURL: URL base para a API de Gerenciamento do RabbitMQ (por exemplo, http://localhost:15672)
+# Environment Variables:
+# Ensure the following environment variables are set:
+# - RABBITMQ_USERNAME: RabbitMQ Management API username
+# - RABBITMQ_PASSWORD: RabbitMQ Management API password
+# - RABBITMQ_BASEURL: Base URL for the RabbitMQ Management API (e.g., http://localhost:15672)
 
-# Recupera as credenciais da API de Gerenciamento do RabbitMQ das variáveis de ambiente
+# Retrieve RabbitMQ Management API credentials from environment variables
 $Username = $Env:RABBITMQ_USERNAME
 $Password = $Env:RABBITMQ_PASSWORD
 $BaseUrl = $Env:RABBITMQ_BASEURL
 
-# Valida se as variáveis de ambiente necessárias estão definidas
+# Validate if required environment variables are set
 if (-not $Username -or -not $Password -or -not $BaseUrl) {
     Write-Output "Error: Missing required environment variables. Ensure RABBITMQ_USERNAME, RABBITMQ_PASSWORD, and RABBITMQ_BASEURL are set."
     exit 1
 }
 
-# Endpoint completo da API para as métricas de visão geral
+# Full API endpoint for overview metrics
 $Url = "$BaseUrl/api/overview"
 
-# Define todas as métricas disponíveis
+# Define all available metrics
 $allAvailableMetrics = @(
     "Total Messages",
     "Messages Ready",
@@ -32,7 +32,7 @@ $allAvailableMetrics = @(
     "Connection Closed Rate"
 )
 
-# Define as métricas selecionadas (deixe vazio para incluir todas as métricas)
+# Define selected metrics (leave empty to include all available metrics)
 $selectedMetrics = @(
     "Deliver Get",
     "Total Consumers",
@@ -40,7 +40,7 @@ $selectedMetrics = @(
     "Messages Ready"
 )
 
-# Se nenhuma métrica for selecionada, use todas as métricas disponíveis
+# Use all available metrics if none are selected
 if ($selectedMetrics.Count -eq 0) {
     $metricsToProcess = $allAvailableMetrics
     Write-Output "No specific metrics selected. Processing all available metrics."
@@ -50,11 +50,11 @@ if ($selectedMetrics.Count -eq 0) {
 }
 
 try {
-    # Converte a senha para SecureString e cria o objeto PSCredential
+    # Convert password to SecureString and create PSCredential object
     $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
     $Credential = New-Object System.Management.Automation.PSCredential($Username, $SecurePassword)
 
-    # Busca métricas da API de Gerenciamento do RabbitMQ
+    # Fetch metrics from RabbitMQ Management API
     $Response = Invoke-RestMethod -Uri $Url -Credential $Credential
 
     if ($Response -eq $null) {
@@ -62,12 +62,12 @@ try {
         exit 1
     }
 
-    # Exibe o JSON bruto da resposta para depuração
+    # Output raw JSON response for debugging
     $json = $Response | ConvertTo-Json -Depth 4
     Write-Output "Raw JSON Response:"
     Write-Output $json
 
-    # Extrai métricas em um dicionário
+    # Extract metrics into a dictionary
     $allMetrics = @(
         @{
             Metric = "Total Messages"
@@ -95,12 +95,12 @@ try {
         }
     )
 
-    # Define os parâmetros de agregação e rollup
+    # Define aggregation and roll-up parameters
     $aggregator = "AVERAGE"
     $timeRollup = "AVERAGE"
     $clusterRollup = "INDIVIDUAL"
 
-    # Saída das métricas no formato exigido
+    # Output metrics in the required format
     foreach ($metric in $metricsToProcess) {
         $metricObject = $allMetrics | Where-Object { $_.Metric -eq $metric }
         if ($metricObject -ne $null) {
