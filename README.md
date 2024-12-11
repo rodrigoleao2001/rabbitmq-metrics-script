@@ -25,13 +25,11 @@ This document explains how to configure and execute the RabbitMQ metrics extensi
    - `RABBITMQ_PASSWORD`: RabbitMQ API password.
    - `RABBITMQ_BASEURL`: RabbitMQ API base URL.
 
-2. Place the PowerShell script and a `.bat` file in a subdirectory under the `monitors` directory in the Machine Agent installation path. The `.bat` file should execute the PowerShell script.
+2. Place the PowerShell script, monitor.xml, and the `.bat` file in a subdirectory under the `monitors` directory in the Machine Agent installation path.
 
-3. Create and place the `monitor.xml` file in the same subdirectory. Configure it to execute the `.bat` file periodically.
+3. Restart the Machine Agent to apply the changes.
 
-4. Restart the Machine Agent to apply the changes.
-
-5. Verify the metrics in the AppDynamics Metric Browser under the `Custom Metrics|RabbitMQ` path.
+4. Verify the metrics in the AppDynamics Metric Browser under the `Application Infrastructure Performance|Root|Individual Nodes|<Server-name>|Custom Metrics|RabbitMQ` path.
 
 ---
 
@@ -46,6 +44,14 @@ This document explains how to configure and execute the RabbitMQ metrics extensi
    - `RABBITMQ_PASSWORD`: RabbitMQ API password.
    - `RABBITMQ_BASEURL`: RabbitMQ API base URL.
 
-3. Execute the PowerShell script directly to send metrics to the HTTP listener.
+3. Execute the PowerShell script directly to send metrics to the HTTP listener (`java -jar machineagent.jar -Dmetric.http.listener=true -Dmetric.http.listener.port=8293`).
 
-4. Verify the metrics in the AppDynamics Metric Browser under the `Custom Metrics|RabbitMQ` path.
+4. To execute the script periodically, configure a Task Scheduler on Windows or the equivalent on other OS.
+
+5. Verify the metrics in the AppDynamics Metric Browser under the `Application Infrastructure Performance|Root|Individual Nodes|<Server-name>|Custom Metrics|RabbitMQ` path.
+
+---
+
+## Additional Notes
+
+When the variable $selectedMetrics = @() is left empty, the script will process and report all metrics listed in the $allAvailableMetrics variable. When you filter metrics using the $selectedMetrics variable, only the metrics you have specified will be monitored.

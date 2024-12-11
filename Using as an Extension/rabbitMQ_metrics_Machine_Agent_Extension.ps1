@@ -33,12 +33,7 @@ $allAvailableMetrics = @(
 )
 
 # Define selected metrics (leave empty to include all available metrics)
-$selectedMetrics = @(
-    "Deliver Get",
-    "Total Consumers",
-    "Total Messages",
-    "Messages Ready"
-)
+$selectedMetrics = @()
 
 # Use all available metrics if none are selected
 if ($selectedMetrics.Count -eq 0) {
