@@ -2,7 +2,7 @@
     <name>RabbitMQ Monitor</name>
     <type>managed</type>
     <enabled>true</enabled>
-    <description>Monitoramento do RabbitMQ</description>
+    <description>RabbitMQ Monitoring</description>
     <monitor-configuration>
     </monitor-configuration>
     <monitor-run-task>

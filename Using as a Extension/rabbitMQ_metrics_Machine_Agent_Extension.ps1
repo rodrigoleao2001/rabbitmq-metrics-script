@@ -1,28 +1,28 @@
 # RabbitMQ Metrics Extension for AppDynamics Machine Agent
-# This script retrieves metrics from the RabbitMQ Management API and outputs them in the format required by the AppDynamics Machine Agent.
-# Metrics are displayed as "Custom Metrics|<metric path>|<metric name>=<value>".
+# Este script recupera métricas da API de Gerenciamento do RabbitMQ e as exibe no formato exigido pelo AppDynamics Machine Agent.
+# As métricas são exibidas como "name=<metric name>,value=<value>,aggregator=<aggregator type>,time-rollup=<time-rollup strategy>,cluster-rollup=<cluster-rollup strategy>".
 
-# Environment Variables:
-# Ensure the following environment variables are set:
-# - RABBITMQ_USERNAME: RabbitMQ Management API username
-# - RABBITMQ_PASSWORD: RabbitMQ Management API password
-# - RABBITMQ_BASEURL: Base URL for the RabbitMQ Management API (e.g., http://localhost:15672)
+# Variáveis de Ambiente:
+# Certifique-se de que as seguintes variáveis de ambiente estejam definidas:
+# - RABBITMQ_USERNAME: Nome de usuário da API de Gerenciamento do RabbitMQ
+# - RABBITMQ_PASSWORD: Senha da API de Gerenciamento do RabbitMQ
+# - RABBITMQ_BASEURL: URL base para a API de Gerenciamento do RabbitMQ (por exemplo, http://localhost:15672)
 
-# Retrieve RabbitMQ Management API credentials from environment variables
+# Recupera as credenciais da API de Gerenciamento do RabbitMQ das variáveis de ambiente
 $Username = $Env:RABBITMQ_USERNAME
 $Password = $Env:RABBITMQ_PASSWORD
 $BaseUrl = $Env:RABBITMQ_BASEURL
 
-# Validate that required environment variables are set
+# Valida se as variáveis de ambiente necessárias estão definidas
 if (-not $Username -or -not $Password -or -not $BaseUrl) {
     Write-Output "Error: Missing required environment variables. Ensure RABBITMQ_USERNAME, RABBITMQ_PASSWORD, and RABBITMQ_BASEURL are set."
     exit 1
 }
 
-# Full API endpoint for the overview metrics
+# Endpoint completo da API para as métricas de visão geral
 $Url = "$BaseUrl/api/overview"
 
-# Define all available metrics
+# Define todas as métricas disponíveis
 $allAvailableMetrics = @(
     "Total Messages",
     "Messages Ready",
@@ -32,18 +32,15 @@ $allAvailableMetrics = @(
     "Connection Closed Rate"
 )
 
-# Define selected metrics (leave empty to include all metrics)
+# Define as métricas selecionadas (deixe vazio para incluir todas as métricas)
 $selectedMetrics = @(
-    # Example: Uncomment the lines below to select specific metrics
-    # "Total Messages",
-    # "Messages Ready"
     "Deliver Get",
-    "Total Consumers"
+    "Total Consumers",
     "Total Messages",
     "Messages Ready"
 )
 
-# If no metrics are selected, use all available metrics
+# Se nenhuma métrica for selecionada, use todas as métricas disponíveis
 if ($selectedMetrics.Count -eq 0) {
     $metricsToProcess = $allAvailableMetrics
     Write-Output "No specific metrics selected. Processing all available metrics."
@@ -53,11 +50,11 @@ if ($selectedMetrics.Count -eq 0) {
 }
 
 try {
-    # Convert the password to SecureString and create PSCredential object
+    # Converte a senha para SecureString e cria o objeto PSCredential
     $SecurePassword = ConvertTo-SecureString $Password -AsPlainText -Force
     $Credential = New-Object System.Management.Automation.PSCredential($Username, $SecurePassword)
 
-    # Fetch metrics from RabbitMQ Management API
+    # Busca métricas da API de Gerenciamento do RabbitMQ
     $Response = Invoke-RestMethod -Uri $Url -Credential $Credential
 
     if ($Response -eq $null) {
@@ -65,30 +62,58 @@ try {
         exit 1
     }
 
-    # Extract metrics into a dictionary
-    $allMetrics = @{
-        "Total Messages"          = if ($Response.queue_totals.messages -ne $null) { [int]$Response.queue_totals.messages } else { 0 }
-        "Messages Ready"          = if ($Response.queue_totals.messages_ready -ne $null) { [int]$Response.queue_totals.messages_ready } else { 0 }
-        "Deliver Get"             = if ($Response.message_stats -ne $null -and $Response.message_stats.deliver_get -ne $null) { [int]$Response.message_stats.deliver_get } else { 0 }
-        "Total Consumers"         = if ($Response.object_totals.consumers -ne $null) { [int]$Response.object_totals.consumers } else { 0 }
-        "Connection Created Rate" = if ($Response.churn_rates.connection_created_details.rate -ne $null) { [double]$Response.churn_rates.connection_created_details.rate } else { 0 }
-        "Connection Closed Rate"  = if ($Response.churn_rates.connection_closed_details.rate -ne $null) { [double]$Response.churn_rates.connection_closed_details.rate } else { 0 }
-    }
+    # Exibe o JSON bruto da resposta para depuração
+    $json = $Response | ConvertTo-Json -Depth 4
+    Write-Output "Raw JSON Response:"
+    Write-Output $json
 
-    # Output metrics in the required format
+    # Extrai métricas em um dicionário
+    $allMetrics = @(
+        @{
+            Metric = "Total Messages"
+            Value = if ($Response.queue_totals.messages -ne $null) { [int]$Response.queue_totals.messages } else { 0 }
+        },
+        @{
+            Metric = "Messages Ready"
+            Value = if ($Response.queue_totals.messages_ready -ne $null) { [int]$Response.queue_totals.messages_ready } else { 0 }
+        },
+        @{
+            Metric = "Deliver Get"
+            Value = if ($Response.message_stats -ne $null -and $Response.message_stats.deliver_get -ne $null) { [int]$Response.message_stats.deliver_get } else { 0 }
+        },
+        @{
+            Metric = "Total Consumers"
+            Value = if ($Response.object_totals.consumers -ne $null) { [int]$Response.object_totals.consumers } else { 0 }
+        },
+        @{
+            Metric = "Connection Created Rate"
+            Value = if ($Response.churn_rates.connection_created_details.rate -ne $null) { [double]$Response.churn_rates.connection_created_details.rate } else { 0 }
+        },
+        @{
+            Metric = "Connection Closed Rate"
+            Value = if ($Response.churn_rates.connection_closed_details.rate -ne $null) { [double]$Response.churn_rates.connection_closed_details.rate } else { 0 }
+        }
+    )
+
+    # Define os parâmetros de agregação e rollup
+    $aggregator = "AVERAGE"
+    $timeRollup = "AVERAGE"
+    $clusterRollup = "INDIVIDUAL"
+
+    # Saída das métricas no formato exigido
     foreach ($metric in $metricsToProcess) {
-        if ($allMetrics.ContainsKey($metric)) {
-            $metricValue = $allMetrics[$metric]
-            if ($metricValue -eq $null) {
-                $metricValue = 0
-            }
-            Write-Output "Custom Metrics|RabbitMQ|$metric=$metricValue"
+        $metricObject = $allMetrics | Where-Object { $_.Metric -eq $metric }
+        if ($metricObject -ne $null) {
+            $metricPath = "Custom Metrics|RabbitMQ|$($metricObject.Metric)"
+            $metricValue = $metricObject.Value
+            Write-Output "name=$metricPath,value=$metricValue,aggregator=$aggregator,time-rollup=$timeRollup,cluster-rollup=$clusterRollup"
         } else {
             Write-Output "Metric '$metric' is not available in the response. Skipping."
         }
     }
 
     Write-Output "Metrics successfully processed."
+    exit 0
 
 } catch {
     Write-Output "An error occurred: $($_.Exception.Message)"
